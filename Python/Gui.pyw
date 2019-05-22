@@ -1,76 +1,70 @@
 from tkinter import *
 from tkinter import messagebox
-#import Conexion
+import Conexion
 import tkinter.ttk as ttk
 import datetime
+import threading
+import time
+import Database
 
-
-'''
-def enviaDato():
-    messagebox.showinfo('Envío de información', 'Enviaste algo')
-    grados.config(text=Conexion.envia()+'°')
-    
-
-def recibirDato():
-    messagebox.showinfo('Recepción de información', 'Recibiste algo')
-    grados.config(text=Conexion.recibe()+'°')    
-    '''
 
 root = Tk()
-'''# Configuración de ventana
-root.resizable(False,False)
-root.config(width=1024, height=768)
-root.title("Control de clima")
-root.config(bg="grey")
+maxTemp = 25
+autoStatus = "OFF"
+temp = 0
 
 
-
-# Centra la ventana creada
-windowWidth = root.winfo_reqwidth()
-windowHeight = root.winfo_reqheight()
-print("Width",windowWidth,"Height",windowHeight)
-positionRight = int(root.winfo_screenwidth()/2 - windowWidth/2)
-positionDown = int(root.winfo_screenheight()/2 - windowHeight/2)
-root.geometry("+{}+{}".format(positionRight, positionDown))
-
-#Set frame de opciones
-opciones= Frame(root)
-opciones.config(width=300, height=300)
-opciones.grid(column=0, row = 0)
-
-#Set label de opciones
-lbl = Label(opciones, text="Selecciona la opcion:")
-lbl.pack()
-
-#Set boton de recepción
-recibe = Button(opciones, text="Recibir Info", command=recibirDato)
-recibe.pack()
-
-#Set boton de envío
-enviar = Button(opciones, text="Enviar info", command=enviaDato)
-enviar.pack()
-
-#Set frame de temperatura
-temperatura = Frame(root)
-temperatura.config(width=300, height=300)
-temperatura.grid(column=1, row = 0)
+win = Toplevel(root)
+win.title("Config")
+l = Label(win, text="Temperatura máxima:")
+l.grid(row=0, column=0)
+i = Entry(win, bd=2)
+i.grid(row=0, column=1)
 
 
-#Set label de opciones
-tempAcual = Label(temperatura, text="Temperatura actual:")
-tempAcual.pack()
-#Set label de grados
-grados = Label(temperatura, text="0°", font =("Tahoma", 50))
-grados.pack()
-'''
+def setMaxTemp():
+    global maxTemp
+    maxTemp = i.get()
+    lbl_maxTemp.config(text="Temp. máxima:" + str(maxTemp)+"°")
+    win.withdraw()
+
+
+b = Button(win, text="Okay", command=setMaxTemp)
+b.grid(row=1, column=0)
+win.withdraw()
+
+
+# Salir del programa
+def exit():
+    if messagebox.askokcancel("Salir", "Salir de la aplicación?"):
+        root.destroy()
+
+# Controla el estado del Abanico (ON/OFF)
+
+
+def controLed():
+    ledStat = Conexion.setLed()
+    abanico.config(text=ledStat)
+
+
+# Revisa el estado del led (Sin modificarlo)
+def statusLed():
+    ledStat = Conexion.checkLed()
+
+
+def configTemp():
+    win.wm_deiconify()
+
+
+# Configura la pantalla principal
 root.iconbitmap('fan.ico')
 root.geometry("589x457+508+214")
-root.resizable(False,False)
+root.resizable(False, False)
 root.title("Control de temperatura")
 root.configure(background="#3f51b5")
 root.configure(highlightbackground="#f0f0f0")
 root.configure(highlightcolor="#5c6bc0")
-# root.config(bgcolor='#d9d9d9',fgcolor='000000')
+
 
 # Labels hora
 lbl_Hora = Label(root)
@@ -124,7 +118,7 @@ temperatura.configure(text="0°")
 temperatura.configure(width=144)
 
 
-# Label humedad
+# Labels humedad
 lbl_humedad = Label(root)
 lbl_humedad.place(relx=0.017, rely=0.503, height=21, width=184)
 lbl_humedad.configure(activebackground="#f9f9f9")
@@ -206,26 +200,35 @@ controlAbanico.configure(pady="0")
 controlAbanico.configure(relief="flat")
 controlAbanico.configure(text="ON/OFF")
 controlAbanico.configure(width=117)
+controlAbanico.config(command=controLed)
 
-manual = Button(root)
-manual.place(relx=0.747, rely=0.241, height=44, width=117)
-manual.configure(activebackground="#757de8")
-manual.configure(activeforeground="#ffffff")
-manual.configure(background="#002984")
-manual.configure(cursor="hand2")
-manual.configure(disabledforeground="#a3a3a3")
-manual.configure(font="-family {Consolas} -size 24")
-manual.configure(foreground="#ffffff")
-manual.configure(highlightbackground="#d9d9d9")
-manual.configure(highlightcolor="#757de8")
-manual.configure(overrelief="flat")
-manual.configure(pady="0")
-manual.configure(relief="flat")
-manual.configure(text="Manual")
-manual.configure(width=117)
+lbl_AutoStatus = Label(root)
+lbl_AutoStatus.place(relx=0.39, rely=0.372, height=21, width=144)
+lbl_AutoStatus.configure(activebackground="#f9f9f9")
+lbl_AutoStatus.configure(activeforeground="black")
+lbl_AutoStatus.configure(background="#3f51b5")
+lbl_AutoStatus.configure(disabledforeground="#a3a3a3")
+lbl_AutoStatus.configure(font="-family {Consolas} -size 12")
+lbl_AutoStatus.configure(foreground="#ffffff")
+lbl_AutoStatus.configure(highlightbackground="#d9d9d9")
+lbl_AutoStatus.configure(highlightcolor="black")
+lbl_AutoStatus.configure(text="Auto: OFF")
+
+
+def autoControl():
+    global autoStatus
+    if (autoStatus == "OFF"):
+        autoStatus = "ON"
+        lbl_AutoStatus.config(text="Arduino: ON")
+        controlAbanico.config(state="disabled")
+    else:
+        autoStatus = "OFF"
+        lbl_AutoStatus.config(text="Arduino: OFF")
+        controlAbanico.config(state="normal")
+
 
 auto = Button(root)
-auto.place(relx=0.747, rely=0.35, height=44, width=117)
+auto.place(relx=0.747, rely=0.241, height=44, width=117)
 auto.configure(activebackground="#757de8")
 auto.configure(activeforeground="#ffffff")
 auto.configure(background="#002984")
@@ -239,6 +242,7 @@ auto.configure(overrelief="flat")
 auto.configure(pady="0")
 auto.configure(relief="flat")
 auto.configure(text="Auto")
+auto.config(command=autoControl)
 
 config = Button(root)
 config.place(relx=0.747, rely=0.46, height=94, width=117)
@@ -254,7 +258,7 @@ config.configure(highlightcolor="#757de8")
 config.configure(overrelief="flat")
 config.configure(pady="0")
 config.configure(relief="flat")
-config.configure(text="CONFIG")
+config.configure(text="CONFIG", command=configTemp)
 
 salir = Button(root)
 salir.place(relx=0.747, rely=0.722, height=94, width=117)
@@ -270,7 +274,7 @@ salir.configure(highlightcolor="#757de8")
 salir.configure(overrelief="flat")
 salir.configure(pady="0")
 salir.configure(relief="flat")
-salir.configure(text="Salir")
+salir.configure(text="Salir", command=exit)
 
 
 # Temperaturas minima/máxima
@@ -284,30 +288,58 @@ lbl_maxTemp.configure(font="-family {Consolas} -size 12")
 lbl_maxTemp.configure(foreground="#ffffff")
 lbl_maxTemp.configure(highlightbackground="#d9d9d9")
 lbl_maxTemp.configure(highlightcolor="black")
-lbl_maxTemp.configure(text="Temp. máxima: 0°")
+lbl_maxTemp.configure(text="Temp. máxima:" + str(maxTemp)+"°")
 lbl_maxTemp.configure(width=144)
-
-lbl_minTemp = Label(root)
-lbl_minTemp.place(relx=0.39, rely=0.372, height=21, width=144)
-lbl_minTemp.configure(activebackground="#f9f9f9")
-lbl_minTemp.configure(activeforeground="black")
-lbl_minTemp.configure(background="#3f51b5")
-lbl_minTemp.configure(disabledforeground="#a3a3a3")
-lbl_minTemp.configure(font="-family {Consolas} -size 12")
-lbl_minTemp.configure(foreground="#ffffff")
-lbl_minTemp.configure(highlightbackground="#d9d9d9")
-lbl_minTemp.configure(highlightcolor="black")
-lbl_minTemp.configure(text="Temp. mínima: 0°")
 
 
 # Actualiza hora
-
-
 def clock():
-    time = datetime.datetime.now().strftime("%H:%M:%S")
-    hora.configure(text=time)
-    #lab['text'] = time
-    root.after(1000, clock)  # run itself again after 1000 ms
+    while(True):
+        reloj = datetime.datetime.now().strftime("%H:%M:%S")
+        hora.configure(text=reloj)
+        time.sleep(.5)
 
-clock()
+# Obtiene la temperatura
+
+
+def getTemp():
+    global temp
+    temp = Conexion.temp()
+    temperatura.config(text=temp+"°")
+    return temp
+
+# Obtiene la humedad
+
+
+def getHumid():
+    humid = Conexion.humid()
+    humedad.config(text=humid+"%")
+    return humid
+
+# Actualiza los valores de la interfaz
+
+
+def updateGUI():
+    reloj = datetime.datetime.now().strftime("%H:%M:%S")
+    temp = str(getTemp())
+    time.sleep(.5)
+    humid = str(getHumid())
+
+    Database.intsertData(reloj, temp, humid)
+    root.after(200000, updateGUI)
+
+
+def handleAuto():
+    global autoStatus, maxTemp ,temp
+    if(autoStatus == "ON"):
+        if (temp > maxTemp):
+                controLed()
+
+    root.after(20000,handleAuto)
+
+
+
+updateGUI()
+handleAuto()
+threading.Thread(target=clock).start()
 root.mainloop()
